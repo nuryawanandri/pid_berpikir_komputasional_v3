@@ -1,6 +1,6 @@
 # Misi Berpikir Komputasional
 
-Web pembelajaran KKA untuk SMP: 20 tahap interaktif tentang dekomposisi, pengenalan pola, dan kepedulian lingkungan. Digunakan satu kelas bersama pada Papan Interaktif Digital (PID), sekitar 120 menit.
+Web pembelajaran KKA untuk SMP: satu layar tujuan pembelajaran dan 20 tahap interaktif tentang dekomposisi, pengenalan pola, dan kepedulian lingkungan. Digunakan satu kelas bersama pada Papan Interaktif Digital (PID), sekitar 120 menit.
 
 ## Menjalankan
 
@@ -28,9 +28,11 @@ Unggah seluruh isi folder `dist` ke hosting statis HTTPS. Aplikasi memakai jalur
 - Murid bergiliran mengamati, memilih, menyeret, dan berdiskusi. Guru memandu diskusi tanpa skor atau batas waktu.
 - Kartu dapat diseret; alternatifnya sentuh kartu lalu sentuh tujuan. Keyboard: Tab untuk berpindah dan Enter/Spasi untuk memilih kartu serta tujuan.
 - Tombol Lanjut terbuka sesudah aktivitas terpenuhi. Petunjuk di bawah navigasi menjelaskan tindakan yang masih diperlukan.
-- Tombol Kembali mempertahankan jawaban. Logo kembali ke cover; Lanjutkan Misi membuka tahap terjauh.
+- Alamat dasar membuka Tujuan Pembelajaran. Tombol Mulai di bawah tiga tujuan membuka cover tanpa menghapus progres. Layar tujuan tidak termasuk hitungan 20 tahap misi.
+- Tombol Kembali mempertahankan jawaban. Logo dan Kembali ke Awal membuka layar tujuan; Lanjutkan Misi pada cover membuka tahap terjauh.
 - Progres dan catatan hanya disimpan pada browser/perangkat yang sama. Memuat ulang tidak menghapus sesi. Jika penyimpanan diblokir, aplikasi tetap berjalan dan memberi pemberitahuan.
-- Di akhir, Kembali ke Awal mempertahankan progres. Ulangi Misi meminta konfirmasi sebelum menghapus sesi kelas.
+- Reset progres tersedia di header semua halaman. Dialog Batal / Ya, reset progres mengonfirmasi penghapusan jawaban, catatan, dan progres hanya untuk aplikasi ini. Setelah reset, aplikasi kembali ke tujuan pembelajaran. Ulangi Misi di halaman terakhir memakai dialog yang sama. Tombol Escape membatalkan dan mengembalikan fokus ke pemicu.
+- Jika reset gagal disimpan oleh browser, sesi aktif tetap direset dan pemberitahuan menjelaskan bahwa progres lama mungkin muncul setelah reload. Data aplikasi lain tidak dihapus.
 - Diskusi lisan diterima. Guru menandai diskusi selesai; aplikasi tidak menilai kualitas jawaban terbuka secara otomatis. Catatan refleksi opsional.
 
 Alokasi: tahap 1–6 (20 menit), 7–9 (15 menit), 10–12 (25 menit), 13–16 (30 menit), 17–20 (30 menit). Ini panduan, bukan timer.
@@ -43,9 +45,15 @@ Pada permainan sampah, pengelompokan didasarkan pada bahan. Kertas serta tisu se
 
 Rujukan B3: [Permen LHK 9/2024](https://jdih.menlhk.go.id/new2/uploads/files/PERMEN%20LHK_9_2024.pdf). Sesuaikan praktik penanganan nyata dengan fasilitas dan pedoman sekolah.
 
-## Struktur
+## Route dan struktur
 
-- `src/stages/`: 20 komponen tahap; `src/stages.ts`: urutan, judul, fase, petunjuk.
+Vue Router menggunakan hash history sehingga reload dan tautan langsung bekerja di hosting statis tanpa fallback server. Contoh: `/#/` (tujuan), `/#/misi/cover`, `/#/misi/dekomposisi`, `/#/misi/refleksi`. Akses ke tahap yang belum terbuka diarahkan ke tahap terjauh yang diizinkan; alamat tidak dikenal menuju tujuan. Tombol Back/Forward browser mengikuti pembatasan yang sama. Format dan kunci progres lama `pid-mission-v1` tetap dipakai.
+
+- `src/router.ts`: konfigurasi route, guard progres, aktivasi tahap setelah navigasi berhasil. URL menentukan halaman aktif; store tidak mengarahkan router melalui watcher.
+- `src/useMissionNavigation.ts`: navigasi Lanjut, Kembali, Lanjutkan Misi, dan awal.
+- `src/pages/LearningObjectives.vue`: layar tujuan sebelum cover.
+
+- `src/stages/`: 20 komponen tahap; `src/stages.ts`: sumber konfigurasi ID, nama route, slug, pemuatan komponen lazy, judul, fase, petunjuk. Untuk menambah tahap, tambahkan metadata dan komponen di registri ini serta sesuaikan batas progres, validasi penyimpanan, dan pengujian.
 - `src/content.ts`: kartu, penjelasan, klasifikasi, dan data simulasi.
 - `src/mission.ts`: Pinia, progres, validasi pemulihan, penyimpanan lokal.
 - `src/components/`: ilustrasi SVG, maskot, eksplorasi, pilihan, dan papan drag & drop.

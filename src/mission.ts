@@ -89,6 +89,7 @@ export const useMission = defineStore("mission", () => {
     () => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.value));
+        storageWarning.value = false;
       } catch {
         storageWarning.value = true;
       }
@@ -101,18 +102,17 @@ export const useMission = defineStore("mission", () => {
   function complete(n = state.value.current) {
     if (!state.value.done.includes(n)) state.value.done.push(n);
   }
-  function next() {
-    if (canNext.value && state.value.current < 20) {
-      state.value.current++;
-      state.value.unlocked = Math.max(
-        state.value.unlocked,
-        state.value.current,
-      );
-      if (state.value.current === 20) complete(20);
-    }
+  // The router activates a stage only after navigation succeeds.
+  function unlockNext() {
+    if (!canNext.value || state.value.current >= 20) return null;
+    const id = state.value.current + 1;
+    state.value.unlocked = Math.max(state.value.unlocked, id);
+    return id;
   }
-  function back() {
-    state.value.current = Math.max(1, state.value.current - 1);
+  function activate(id: number) {
+    if (!Number.isInteger(id) || id < 1 || id > state.value.unlocked) return;
+    state.value.current = id;
+    if (id === 20) complete(20);
   }
   function choose(key: string, id: string, multi = true) {
     const a = (state.value.choices[key] ??= []);
@@ -133,8 +133,8 @@ export const useMission = defineStore("mission", () => {
     storageWarning,
     canNext,
     complete,
-    next,
-    back,
+    unlockNext,
+    activate,
     choose,
     visit,
     reset,

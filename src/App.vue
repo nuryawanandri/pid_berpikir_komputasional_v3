@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch, provide } from "vue";
 import { useMission } from "./mission";
 import { stages } from "./stages";
+import { RouterLink, RouterView, useRoute } from "vue-router";
+import { useMissionNavigation } from "./useMissionNavigation";
+import ResetProgressDialog from "./components/ResetProgressDialog.vue";
+import { requestResetKey } from "./resetProgress";
+const route = useRoute();
+const nav = useMissionNavigation();
+const resetDialog = ref<InstanceType<typeof ResetProgressDialog>>();
+const resetMessage = ref("");
+const requestReset = () => resetDialog.value?.open();
+provide(requestResetKey, requestReset);
 const m = useMission();
-const stage = computed(() => stages[m.state.current - 1]!);
+const stage = computed(() => stages.find((s) => s.id === route.meta.stageId));
 const main = ref<HTMLElement>();
 const fullscreenMessage = ref("");
 watch(
-  () => m.state.current,
+  () => route.fullPath,
   async () => {
+    resetMessage.value = "";
     await nextTick();
     window.scrollTo({ top: 0, behavior: "instant" });
     main.value?.focus();
@@ -27,34 +38,41 @@ async function fullscreen() {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <a href="#" class="brand" @click.prevent="m.state.current = 1"
+      <RouterLink :to="{ name: 'objectives' }" class="brand"
         ><span class="brand-mark">♧</span
-        ><span>MISI <b>BUMI</b><small>BERPIKIR KOMPUTASIONAL</small></span></a
+        ><span
+          >MISI <b>BUMI</b><small>BERPIKIR KOMPUTASIONAL</small></span
+        ></RouterLink
       >
       <div class="header-context">
         <span class="live-dot"></span> KKA <span class="divider">/</span> SMP
         <span class="divider">/</span> ADIWIYATA
       </div>
-      <button
-        class="fullscreen-button"
-        aria-label="Layar penuh"
-        @click="fullscreen"
-      >
-        ⛶ <span>Layar penuh</span>
-      </button>
+      <div class="header-actions">
+        <button class="secondary reset-progress-button" @click="requestReset">
+          Reset progres</button
+        ><button
+          class="fullscreen-button"
+          aria-label="Layar penuh"
+          @click="fullscreen"
+        >
+          ⛶ <span>Layar penuh</span>
+        </button>
+      </div>
     </header>
     <div
-      v-if="m.storageWarning || fullscreenMessage"
+      v-if="m.storageWarning || resetMessage || fullscreenMessage"
       role="status"
       class="system-note"
     >
       {{
+        resetMessage ||
         fullscreenMessage ||
         "Progres hanya tersimpan selama sesi ini karena penyimpanan browser tidak tersedia."
       }}
     </div>
-    <main ref="main" tabindex="-1" :class="{ cover: m.state.current === 1 }">
-      <template v-if="m.state.current !== 1 && m.state.current !== 20"
+    <main ref="main" tabindex="-1" :class="{ cover: stage?.id === 1 }">
+      <template v-if="stage && stage.id !== 1 && stage.id !== 20"
         ><div class="stage-heading">
           <div>
             <span class="eyebrow"
@@ -67,9 +85,9 @@ async function fullscreen() {
             String(stage.id).padStart(2, "0")
           }}</span>
         </div></template
-      ><component :is="stage.component" :key="stage.id" />
+      ><RouterView />
     </main>
-    <footer class="mission-footer">
+    <footer v-if="stage" class="mission-footer">
       <div class="progress-label">
         <span>{{
           m.state.current === 20
@@ -96,12 +114,12 @@ async function fullscreen() {
         v-if="m.state.current > 1 && m.state.current < 20"
         class="nav-actions"
       >
-        <button class="secondary" @click="m.back()">← Kembali</button
+        <button class="secondary" @click="nav.back()">← Kembali</button
         ><button
           class="primary"
           :disabled="!m.canNext"
           aria-describedby="next-hint"
-          @click="m.next()"
+          @click="nav.next()"
         >
           Lanjut →
         </button>
@@ -115,5 +133,14 @@ async function fullscreen() {
         {{ m.canNext ? "Siap! Mari lanjutkan petualangan." : stage.hint }}
       </p>
     </footer>
+    <ResetProgressDialog
+      ref="resetDialog"
+      @reset="
+        (saved) =>
+          (resetMessage = saved
+            ? 'Progres kelas berhasil direset. Siap memulai misi baru.'
+            : 'Sesi aktif telah direset, tetapi perubahan tidak berhasil disimpan. Progres lama mungkin muncul setelah halaman dimuat ulang.')
+      "
+    />
   </div>
 </template>

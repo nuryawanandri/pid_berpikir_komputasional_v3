@@ -1,22 +1,9 @@
 <script setup lang="ts">
-import { useMission } from "../mission";
-import { ref, nextTick } from "vue";
 import Mascot from "../components/Mascot.vue";
-const dialog = ref<HTMLDialogElement>();
-const resetButton = ref<HTMLButtonElement>();
-async function ask() {
-  await nextTick();
-  dialog.value?.showModal();
-}
-function close() {
-  dialog.value?.close();
-  resetButton.value?.focus();
-}
-function reset() {
-  dialog.value?.close();
-  m.reset();
-}
-const m = useMission();
+import { useMissionNavigation } from "../useMissionNavigation";
+import { useResetProgress } from "../resetProgress";
+const nav = useMissionNavigation();
+const requestReset = useResetProgress();
 </script>
 <template>
   <div class="completion">
@@ -40,20 +27,9 @@ const m = useMission();
       </article>
     </div>
     <div class="choice-row justify-center">
-      <button ref="resetButton" class="primary" @click="ask">
-        ↻ Ulangi misi</button
-      ><button class="secondary" @click="m.state.current = 1">
-        ⌂ Kembali ke awal
-      </button>
+      <button class="primary" @click="requestReset">↻ Ulangi misi</button
+      ><button class="secondary" @click="nav.home()">⌂ Kembali ke awal</button>
     </div>
     <p class="helper">Bawa cara berpikir cerdas ini ke lingkungan sekolahmu.</p>
   </div>
-  <dialog ref="dialog" @cancel="close">
-    <h3>Mulai petualangan baru?</h3>
-    <p>Jawaban dan progres kelas pada perangkat ini akan dihapus.</p>
-    <div class="choice-row">
-      <button class="secondary" autofocus @click="close">Batal</button
-      ><button class="primary" @click="reset">Ya, ulangi misi</button>
-    </div>
-  </dialog>
 </template>

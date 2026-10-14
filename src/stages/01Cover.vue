@@ -2,6 +2,8 @@
 import { useMission } from "../mission";
 import SchoolScene from "../components/SchoolScene.vue";
 import Mascot from "../components/Mascot.vue";
+import { useMissionNavigation } from "../useMissionNavigation";
+const nav = useMissionNavigation();
 const m = useMission();
 </script>
 <template>
@@ -22,14 +24,14 @@ const m = useMission();
         class="primary start-button"
         @click="
           m.complete();
-          m.next();
+          nav.next();
         "
       >
         Mulai misi <span>↗</span></button
       ><button
         v-if="m.state.unlocked > 1"
         class="secondary mt-3"
-        @click="m.state.current = m.state.unlocked"
+        @click="nav.resume()"
       >
         Lanjutkan misi {{ m.state.unlocked }} →
       </button>

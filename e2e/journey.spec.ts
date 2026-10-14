@@ -1,5 +1,29 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { environment, decomposition, waste, finalCards } from "../src/content";
+import { stages } from "../src/stages";
+import { fresh, STORAGE_KEY } from "../src/mission";
+async function seedUnlocked(page: Page, unlocked: number) {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Tujuan Pembelajaran" }),
+  ).toBeVisible();
+  await page.evaluate(
+    ({ progress, key }) => localStorage.setItem(key, JSON.stringify(progress)),
+    {
+      key: STORAGE_KEY,
+      progress: {
+        ...fresh(),
+        current: unlocked,
+        unlocked,
+        done: Array.from({ length: unlocked - 1 }, (_, i) => i + 1),
+      },
+    },
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Tujuan Pembelajaran" }),
+  ).toBeVisible();
+}
 async function press(locator: Locator, touch: boolean) {
   if (touch) await locator.tap();
   else await locator.click();
@@ -27,6 +51,7 @@ test("complete all twenty stages, persistence, feedback, reset", async ({
     path: `test-results/cover-${info.project.name}.png`,
     fullPage: true,
   });
+  await click("Mulai");
   await click("Mulai misi ↗");
   await expect(
     page.getByRole("button", { name: "Lanjut →", exact: true }),
@@ -128,6 +153,7 @@ test("complete all twenty stages, persistence, feedback, reset", async ({
     page.getByRole("heading", { name: "Misi selesai!" }),
   ).toBeVisible();
   await click("⌂ Kembali ke awal");
+  await click("Mulai");
   await click("Lanjutkan misi 20 →");
   await click("↻ Ulangi misi");
   await click("Batal");
@@ -135,29 +161,20 @@ test("complete all twenty stages, persistence, feedback, reset", async ({
     page.getByRole("heading", { name: "Misi selesai!" }),
   ).toBeVisible();
   await click("↻ Ulangi misi");
-  await click("Ya, ulangi misi");
+  await click("Ya, reset progres");
   await expect(
-    page.getByRole("button", { name: "Mulai misi ↗", exact: true }),
+    page.getByRole("button", { name: "Mulai", exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
 test("pointer drag, outside drop, cancel, keyboard, responsive layout", async ({
   page,
 }, info) => {
-  await page.goto("/");
-  await page.evaluate(() => {
-    const p = JSON.parse(localStorage.getItem("pid-mission-v1") || "null");
-    if (!p) return;
-  });
-  await page.getByRole("button", { name: "Mulai misi ↗", exact: true }).click();
-  await page.evaluate(() => {
-    const p = JSON.parse(localStorage.getItem("pid-mission-v1")!);
-    p.current = 7;
-    p.unlocked = 7;
-    p.done = [1, 2, 3, 4, 5, 6];
-    localStorage.setItem("pid-mission-v1", JSON.stringify(p));
-  });
-  await page.reload();
+  await seedUnlocked(page, 7);
+  await page.goto("/#/misi/adiwiyata");
+  await expect(
+    page.getByRole("heading", { name: "Jelajah Adiwiyata" }),
+  ).toBeVisible();
   const card = page.locator('[data-card="e1"]');
   const from = await card.boundingBox();
   const dest = await page.locator('[data-drop="Energi"]').boundingBox();
@@ -205,19 +222,15 @@ test("pointer drag, outside drop, cancel, keyboard, responsive layout", async ({
   }
 });
 test("all stages render at PID and mobile widths", async ({ page }, info) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Mulai misi ↗", exact: true }).click();
+  await seedUnlocked(page, 20);
   for (const width of [1920, 390]) {
     await page.setViewportSize({ width, height: width === 1920 ? 1080 : 844 });
     for (let current = 1; current <= 20; current++) {
-      await page.evaluate((n) => {
-        const p = JSON.parse(localStorage.getItem("pid-mission-v1")!);
-        p.current = n;
-        p.unlocked = 20;
-        p.done = Array.from({ length: 20 }, (_, i) => i + 1);
-        localStorage.setItem("pid-mission-v1", JSON.stringify(p));
-      }, current);
-      await page.reload();
+      await page.goto("/#/misi/" + stages[current - 1]!.slug);
+      await expect(page.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        String(current),
+      );
       await expect(page.locator("main")).not.toBeEmpty();
       expect(
         await page.evaluate(
@@ -236,16 +249,11 @@ test("touch drag uses real emulated touch and cancellation leaves card available
   page,
 }, info) => {
   test.skip(info.project.name !== "touch", "Touch-specific input");
-  await page.goto("/");
-  await page.getByRole("button", { name: "Mulai misi ↗", exact: true }).tap();
-  await page.evaluate(() => {
-    const p = JSON.parse(localStorage.getItem("pid-mission-v1")!);
-    p.current = 7;
-    p.unlocked = 7;
-    p.done = [1, 2, 3, 4, 5, 6];
-    localStorage.setItem("pid-mission-v1", JSON.stringify(p));
-  });
-  await page.reload();
+  await seedUnlocked(page, 7);
+  await page.goto("/#/misi/adiwiyata");
+  await expect(
+    page.getByRole("heading", { name: "Jelajah Adiwiyata" }),
+  ).toBeVisible();
   const session = await page.context().newCDPSession(page);
   const from = await page.locator('[data-card="e1"]').boundingBox();
   const dest = await page.locator('[data-drop="Energi"]').boundingBox();
